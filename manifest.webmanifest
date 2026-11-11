@@ -1,0 +1,15 @@
+{
+  "name": "영양사 국시 문제풀이",
+  "short_name": "영양사 국시",
+  "description": "영양사 국가시험 대비 문제풀이, 모의고사, 오답노트",
+  "lang": "ko",
+  "start_url": "./index.html#home",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f6f2",
+  "theme_color": "#237a4b",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

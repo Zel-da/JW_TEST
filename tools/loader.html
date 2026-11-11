@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>영양사 국시 문제풀이</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#237a4b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="영양사 국시">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+  <style id="loader-style">
+    :root {
+      --bg: #f3f6f2; --surface: #ffffff; --sunken: #eaf0e9; --text: #17241c; --muted: #5d6d63;
+      --border: #d6e0d7; --primary: #237a4b; --primary-soft: #dff0e5; --danger: #b93a30;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101612; --surface: #18201b; --sunken: #121a15; --text: #e3ebe5; --muted: #95a59b;
+        --border: #2a352e; --primary: #52c084; --primary-soft: #1b3426; --danger: #f0857a;
+        color-scheme: dark;
+      }
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+    .lock { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); box-sizing: border-box; }
+    .lock-box { width: 100%; max-width: 360px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 22px; box-sizing: border-box; }
+    .lock-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; color: var(--primary); }
+    .muted { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+    .pin-dots { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; }
+    .pin-dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); }
+    .pin-dots span.on { background: var(--primary); border-color: var(--primary); }
+    #pin { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+    .lock-err { color: var(--danger); min-height: 22px; margin: 4px 0 8px; font-size: 14px; }
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .key { height: 64px; border-radius: 16px; border: 1px solid var(--border); background: var(--sunken); color: var(--text); font: inherit; font-size: 24px; font-weight: 500; cursor: pointer; touch-action: manipulation; }
+    .key.fn { font-size: 15px; background: var(--surface); }
+    .key:active { background: var(--primary-soft); }
+    .key:disabled { opacity: .5; }
+    .remember { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; color: var(--muted); }
+    .remember input { width: 18px; height: 18px; accent-color: var(--primary); }
+    .shake { animation: shake .35s; }
+    @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+  </style>
+</head>
+<body>
+  <div class="lock" id="lock">
+    <form class="lock-box" id="lockForm" autocomplete="off">
+      <div class="lock-title">영양사 국시</div>
+      <p class="muted" id="lockMsg">비밀번호 8자리를 입력하세요</p>
+      <div class="pin-dots" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" aria-label="비밀번호" autocomplete="current-password">
+      <p class="lock-err" id="pinErr" role="alert"></p>
+      <div class="keypad" id="keypad"></div>
+      <label class="remember"><input type="checkbox" id="remember" checked> 이 기기에서 기억하기</label>
+    </form>
+  </div>
+
+  <!-- 사이트 전체(HTML·CSS·JS·문제)는 아래에 AES-256-GCM으로 암호화되어 있습니다. 키는 비밀번호에서 PBKDF2-SHA256으로 만듭니다. -->
+  <script id="payload" type="application/json">__PAYLOAD__</script>
+  <script>
+  (function () {
+    'use strict';
+    var P = JSON.parse(document.getElementById('payload').textContent);
+    var KEY_STORE = 'dietitian-prep-key';
+    var PIN_LEN = 8;
+    var b64 = function (s) { return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); }); };
+    var tob64 = function (buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); };
+    var salt = b64(P.salt), iv = b64(P.iv), data = b64(P.data);
+
+    function derive(pw) {
+      return crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey'])
+        .then(function (base) {
+          return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: P.iter, hash: 'SHA-256' },
+            base, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+        });
+    }
+    function decrypt(key) {
+      return crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, data)
+        .then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); });
+    }
+    function mount(site) {
+      document.getElementById('lock').remove();
+      var st = document.createElement('style'); st.textContent = site.css; document.head.appendChild(st);
+      document.getElementById('loader-style').remove();
+      var holder = document.createElement('div'); holder.innerHTML = site.body;
+      while (holder.firstChild) document.body.appendChild(holder.firstChild);
+      window.__PREP_UNLOCKED__ = true;
+      site.js.forEach(function (code) {
+        var s = document.createElement('script'); s.textContent = code; document.body.appendChild(s);
+      });
+      if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        navigator.serviceWorker.register('sw.js').catch(function () {});
+      }
+    }
+
+    // 이 기기에 기억된 키가 있으면 비밀번호 없이 열기 (사이트를 새로 배포해도 비밀번호가 같으면 유지)
+    function tryRemembered() {
+      var saved = null;
+      try { saved = JSON.parse(localStorage.getItem(KEY_STORE) || 'null'); } catch (e) { saved = null; }
+      if (!saved || saved.salt !== P.salt) return Promise.resolve(false);
+      return crypto.subtle.importKey('raw', b64(saved.key), { name: 'AES-GCM' }, false, ['decrypt'])
+        .then(decrypt).then(function (site) { mount(site); return true; })
+        .catch(function () { try { localStorage.removeItem(KEY_STORE); } catch (e) { /* 무시 */ } return false; });
+    }
+
+    var pin = document.getElementById('pin'), err = document.getElementById('pinErr');
+    var msg = document.getElementById('lockMsg'), box = document.getElementById('lockForm');
+    var keypad = document.getElementById('keypad'), busy = false;
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 'del', 0, 'ok'].forEach(function (k) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'key' + (typeof k === 'string' ? ' fn' : ''); b.dataset.k = k;
+      b.textContent = k === 'del' ? '지우기' : k === 'ok' ? '확인' : k;
+      keypad.appendChild(b);
+    });
+    function dots() {
+      document.querySelectorAll('.pin-dots span').forEach(function (d, i) { d.classList.toggle('on', i < pin.value.length); });
+    }
+    function setBusy(on) {
+      busy = on; msg.textContent = on ? '여는 중…' : '비밀번호 8자리를 입력하세요';
+      keypad.querySelectorAll('button').forEach(function (b) { b.disabled = on; });
+    }
+    function check() {
+      if (busy || !pin.value) return;
+      setBusy(true);
+      var pw = pin.value, key;
+      derive(pw).then(function (k) { key = k; return decrypt(k); })
+        .then(function (site) {
+          if (document.getElementById('remember').checked) {
+            crypto.subtle.exportKey('raw', key).then(function (raw) {
+              try { localStorage.setItem(KEY_STORE, JSON.stringify({ salt: P.salt, key: tob64(raw) })); } catch (e) { /* 무시 */ }
+            });
+          }
+          mount(site);
+        })
+        .catch(function () {
+          setBusy(false);
+          err.textContent = '비밀번호가 맞지 않아요. 다시 입력하세요.';
+          pin.value = ''; dots(); box.classList.add('shake');
+          setTimeout(function () { box.classList.remove('shake'); }, 400);
+        });
+    }
+    pin.addEventListener('input', function () {
+      pin.value = pin.value.replace(/\D/g, '').slice(0, PIN_LEN); err.textContent = ''; dots();
+      if (pin.value.length === PIN_LEN) check();
+    });
+    box.addEventListener('submit', function (ev) { ev.preventDefault(); check(); });
+    keypad.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-k]'); if (!b || busy) return;
+      var k = b.dataset.k;
+      if (k === 'del') pin.value = pin.value.slice(0, -1);
+      else if (k === 'ok') return check();
+      else if (pin.value.length < PIN_LEN) pin.value += k;
+      err.textContent = ''; dots();
+      if (pin.value.length === PIN_LEN) check();
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (!document.getElementById('lock') || busy) return;
+      if (/^[0-9]$/.test(ev.key) && pin.value.length < PIN_LEN) { pin.value += ev.key; err.textContent = ''; dots(); if (pin.value.length === PIN_LEN) check(); }
+      else if (ev.key === 'Backspace') { pin.value = pin.value.slice(0, -1); dots(); }
+      else if (ev.key === 'Enter') check();
+    });
+
+    if (!window.crypto || !crypto.subtle) {
+      err.textContent = '이 브라우저는 암호 해제를 지원하지 않아요. https 주소로 열어주세요.';
+      return;
+    }
+    tryRemembered();
+  })();
+  </script>
+</body>
+</html>
