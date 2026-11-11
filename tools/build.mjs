@@ -26,7 +26,9 @@ const read = p => readFileSync(join(SRC, p), 'utf8');
 const index = read('index.html');
 const body = index.match(/<body>([\s\S]*?)<script/)[1];
 const scriptSrcs = [...index.matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1])
-  .filter(p => existsSync(join(SRC, p)) || (console.warn('건너뜀(파일 없음):', p), false));
+  .filter(p => existsSync(join(SRC, p)) || (console.warn('건너뜀(파일 없음):', p), false))
+  // 검증이 끝나지 않은 파일은 PREP_EXCLUDE="js/a.js,js/b.js" 로 빼고 빌드할 수 있다
+  .filter(p => !(process.env.PREP_EXCLUDE || '').split(',').includes(p) || (console.warn('제외(검증 대기):', p), false));
 const js = scriptSrcs.map(p => `/* ${p} */\n` + read(p));
 const css = read('css/style.css');
 const site = JSON.stringify({ v: 1, builtAt: new Date().toISOString(), css, body, js });
